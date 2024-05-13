@@ -10,7 +10,7 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.1towayy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -43,9 +43,24 @@ async function run() {
         app.get('/myQueries', async (req, res) => {
             const usermail = req.query.email;
             const filter = { userEmail: usermail };
-            const result = await productCollection.find(filter).toArray();
+            const result = await productCollection.find(filter).sort({ addingDate: -1 }).toArray();
             res.send(result);
             // console.log(user);
+        })
+
+        app.get('/productDetails/:id', async (req, res) => {
+            const id = req.params.id;
+            // console.log(id);
+            const filter = { _id: new ObjectId(id) };
+            const result = await productCollection.findOne(filter);
+            res.send(result);
+        })
+
+        app.delete('/product/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const result = await productCollection.deleteOne(filter);
+            res.send(result);
         })
 
         // Send a ping to confirm a successful connection
