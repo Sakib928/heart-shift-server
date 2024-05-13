@@ -56,6 +56,13 @@ async function run() {
             res.send(result);
         })
 
+        app.patch('/updateProduct/:id', async (req, res) => {
+            const id = req.params.id;
+            const update = req.body;
+            console.log(id);
+            console.log(update)
+        })
+
         app.delete('/product/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
