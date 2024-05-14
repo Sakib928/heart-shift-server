@@ -35,6 +35,17 @@ async function run() {
             res.send(result);
         })
 
+        app.post('/recommendProduct', async (req, res) => {
+            const item = req.body;
+            console.log(item.linkID);
+            const filterItem = { _id: new ObjectId(item.linkID) };
+
+            const update = await productCollection.updateOne(filterItem, { $inc: { recommendationCount: 1 } })
+
+            const result = await recommendCollection.insertOne(item);
+            res.send(result);
+        })
+
         app.get('/allProducts', async (req, res) => {
             const result = await productCollection.find().sort({ addingDate: -1 }).toArray();
             res.send(result);
@@ -57,10 +68,23 @@ async function run() {
         })
 
         app.patch('/updateProduct/:id', async (req, res) => {
-            const id = req.params.id;
-            const update = req.body;
+            const id = req.params?.id;
             console.log(id);
-            console.log(update)
+            // console.log(update);
+            const update = req?.body;
+            const query = { _id: new ObjectId(id) };
+            const updatedItem = {
+                $set: {
+                    productName: update.productName,
+                    productBrand: update.productBrand,
+                    boycottReason: update.boycottReason,
+                    queryTitle: update.queryTitle,
+                    productImage: update.productImage
+                }
+            }
+            const result = await productCollection.updateOne(query, updatedItem);
+            res.send(result);
+
         })
 
         app.delete('/product/:id', async (req, res) => {
