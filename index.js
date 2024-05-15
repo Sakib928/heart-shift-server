@@ -1,19 +1,38 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const cookies = require('cookie-parser');
 require('dotenv').config()
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
 //middlewares
 app.use(cors({
-    origin: ['http://localhost:5173', 'a11-client-b9a9f.web.app', 'https://a11-client-b9a9f.web.app/'],
+    origin: ['http://localhost:5173', 'https://a11-client-b9a9f.web.app', 'https://a11-client-b9a9f.firebaseapp.com'],
     credentials: true
 }))
 app.use(express.json());
+app.use(cookies());
 
 
+const verifyToken = async (req, res, next) => {
+    const token = req.cookies?.token;
+    console.log('middleware detected token', token);
+    if (!token) {
+        return res.status(401).send({ message: 'not authorized' });
+    }
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: 'not authorized' });
+        }
+        console.log('decoded value in the token', decoded);
+        req.user = decoded;
+        next();
+    })
+}
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.1towayy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -25,12 +44,34 @@ const client = new MongoClient(uri, {
     }
 });
 
+const cookieOptions = {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    secure: process.env.NODE_ENV === "production" ? true : false,
+};
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        // await client.connect();
+        await client.connect();
         const productCollection = client.db("productsDB").collection("boycotts");
         const recommendCollection = client.db("productsDB").collection("recommendations");
+
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
+                expiresIn: '1h'
+            });
+            res.cookie('token', token, cookieOptions).send({ success: true });
+        })
+
+        app.post('/logout', (req, res) => {
+            const user = req.body;
+            console.log('logging out', user);
+            res.clearCookie('token', { ...cookieOptions, maxAge: 0 }).send({
+                success: true
+            })
+        })
 
         app.post('/addQuery', async (req, res) => {
             const item = req.body;
@@ -69,9 +110,15 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/myQueries', async (req, res) => {
-            const usermail = req.query.email;
-            const filter = { userEmail: usermail };
+        app.get('/myQueries', verifyToken, async (req, res) => {
+            if (req.query.email !== req.user.email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            let filter = {};
+            if (req.query?.email) {
+                const usermail = req.query.email;
+                filter = { userEmail: usermail };
+            }
             const result = await productCollection.find(filter).sort({ addingDate: -1 }).toArray();
             res.send(result);
             // console.log(user);
@@ -146,6 +193,6 @@ app.get('/', (req, res) => {
 })
 
 app.listen(port, () => {
-    console.log('heart-shift server is running')
+    console.log(`heart-shift server is running at ${port}`)
 })
 
