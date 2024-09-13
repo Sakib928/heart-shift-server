@@ -9,7 +9,7 @@ const port = process.env.PORT || 5000;
 
 //middlewares
 app.use(cors({
-    origin: ['http://localhost:5173', 'https://a11-client-b9a9f.web.app', 'https://a11-client-b9a9f.firebaseapp.com'],
+    origin: ['http://localhost:5173', 'https://a11-client-b9a9f.web.app', 'https://a11-client-b9a9f.firebaseapp.com', 'https://heart-shift.netlify.app'],
     credentials: true
 }))
 app.use(express.json());
@@ -53,7 +53,7 @@ const cookieOptions = {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
         const productCollection = client.db("productsDB").collection("boycotts");
         const recommendCollection = client.db("productsDB").collection("recommendations");
 
@@ -139,6 +139,7 @@ async function run() {
             const result = await recommendCollection.find(query).toArray();
             res.send(result);
         })
+
 
         app.patch('/updateProduct/:id', async (req, res) => {
             const id = req.params?.id;
